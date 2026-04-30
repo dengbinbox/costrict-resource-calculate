@@ -52,6 +52,7 @@ function parseCSV(text: string): string[][] {
 }
 
 /** 解析场景 CSV */
+/** 解析场景 CSV */
 export function parseScenariosCSV(text: string): ScenarioRecord[] {
   const rows = parseCSV(text)
   // 跳过表头
@@ -61,9 +62,9 @@ export function parseScenariosCSV(text: string): ScenarioRecord[] {
     activeUsers: parseNumRequired(cols[2] ?? ''),
     rpm: parseNumRequired(cols[3] ?? ''),
     concurrency: parseNum(cols[4] ?? ''),
+    priority: parseNum(cols[5] ?? ''),
   })).filter((r) => r.scene !== '')
 }
-
 /** 解析显卡模型 CSV */
 export function parseGpuModelsCSV(text: string): GpuModelRecord[] {
   const rows = parseCSV(text)

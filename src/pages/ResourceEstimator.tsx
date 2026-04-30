@@ -329,7 +329,24 @@ export default function ResourceEstimator() {
   useEffect(() => {
     // 场景和模型数据内联（?raw），直接解析
     try {
-      setScenarios(parseScenariosCSV(scenariosCsvRaw))
+      const rawScenarios = parseScenariosCSV(scenariosCsvRaw)
+      // 排序：优先级为0的排最前（作为默认），其余按优先级从高到低
+      const sorted = [...rawScenarios].sort((a, b) => {
+        const pa = a.priority
+        const pb = b.priority
+        if (pa === 0 && pb !== 0) return -1
+        if (pb === 0 && pa !== 0) return 1
+        if (pa === 0 && pb === 0) return 0
+        // 其余：从高到低（null 放最后）
+        if (pa == null && pb == null) return 0
+        if (pa == null) return 1
+        if (pb == null) return -1
+        return pb - pa
+      })
+      setScenarios(sorted)
+      // 默认选中优先级为 0 的场景
+      const defaultScene = sorted.find((s) => s.priority === 0)
+      if (defaultScene) setSelectedScene(defaultScene.scene)
       setGpuModels(parseGpuModelsCSV(gpuModelsCsvRaw))
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : '数据加载异常')
@@ -526,7 +543,25 @@ export default function ResourceEstimator() {
                   >
                     {scenarios.map((s) => (
                       <Option key={s.scene} value={s.scene}>
-                        {s.scene}
+                        <Tooltip
+                          title={
+                            <div style={{ fontSize: 12, lineHeight: '20px' }}>
+                              <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>all / user / rpm</div>
+                              <div style={{ color: '#fff', fontWeight: 600 }}>
+                                {s.totalEmployees} / {s.activeUsers} / {s.rpm}
+                              </div>
+                            </div>
+                          }
+                          placement="right"
+                          color="#001529"
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, width: '100%' }}>
+                            {s.scene}
+                            {s.priority === 0 && (
+                              <Tag color="green" style={{ margin: 0, fontSize: 11 }}>默认</Tag>
+                            )}
+                          </span>
+                        </Tooltip>
                       </Option>
                     ))}
                   </Select>
@@ -605,8 +640,8 @@ export default function ResourceEstimator() {
                     <Tooltip
                       title={
                         customUsers && sceneRecord
-                          ? `未填写时自动计算：(RPM/使用人数) × 自定义人数 = ${((sceneRecord.rpm / sceneRecord.activeUsers) * customUsers).toFixed(2)}`
-                          : '未填写时通过公式自动计算（需先选择场景和自定义人数）'
+                          ? `每分钟请求数未填写时自动计算：(RPM/使用人数) × 自定义人数 = ${((sceneRecord.rpm / sceneRecord.activeUsers) * customUsers).toFixed(2)}`
+                          : '每分钟请求数：未填写时通过场景比例公式自动计算（需先选择场景和自定义公司人数）'
                       }
                     >
                       <span>

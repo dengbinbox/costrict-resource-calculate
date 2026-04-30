@@ -5,6 +5,7 @@ export interface ScenarioRecord {
   activeUsers: number      // 使用人数
   rpm: number             // RPM
   concurrency: number | null  // 并发
+  priority: number | null  // 优先级（0=默认选中，其余从高到低排序）
 }
 
 /** 显卡模型数据（来自 gpu_models.csv） */

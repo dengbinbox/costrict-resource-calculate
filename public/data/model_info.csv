@@ -1,5 +1,5 @@
-模型名称,模型地址,模型参数量,上下文长度,支持语言,开源协议
-MiniMaxM2.7,https://www.minimaxi.com|https://huggingface.co/MiniMaxAI/MiniMax-M2,2.7T MoE (激活450B),1M tokens,中文/英文,商业授权
-GLM-4.6-FP8,https://zhipuai.cn|https://huggingface.co/THUDM/GLM-4,FP8量化版,128K tokens,中文/英文/多语言,Apache 2.0
-Kimi-K2.5,https://kimi.moonshot.cn|https://huggingface.co/moonshotai/Kimi-K2,1T MoE (激活32B),128K tokens,中文/英文,MIT
-GLM-4.7-FP8,https://zhipuai.cn|https://huggingface.co/THUDM/GLM-4,FP8量化版,128K tokens,中文/英文/多语言,Apache 2.0
+模型名称,模型地址,模型参数量,上下文长度,开源协议
+MiniMaxM2.7,https://modelscope.cn/models/MiniMax/MiniMax-M2.7|https://huggingface.co/MiniMaxAI/MiniMax-M2.7,228.70B,200K,非商业许可证
+GLM-4.6-FP8,https://modelscope.cn/models/ZhipuAI/GLM-4.6-FP8|https://huggingface.co/zai-org/GLM-4.6-FP8,358.46B,200K ,
+Kimi-K2.5,https://modelscope.cn/models/moonshotai/Kimi-K2.5|https://huggingface.co/moonshotai/Kimi-K2.5,1058.59B,256K,MIT
+GLM-4.7-FP8,https://modelscope.cn/models/ZhipuAI/GLM-4.7-FP8|https://huggingface.co/zai-org/GLM-4.7-FP8,358.46B,200K,
