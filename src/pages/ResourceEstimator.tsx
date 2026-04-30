@@ -2,11 +2,14 @@ import { useEffect, useState, useMemo } from 'react'
 import scenariosCsvRaw from '../../public/data/scenarios.csv?raw'
 import gpuModelsCsvRaw from '../../public/data/gpu_models.csv?raw'
 import {
+  Button,
   Card,
   Col,
+  Descriptions,
   Divider,
   Form,
   InputNumber,
+  Modal,
   Row,
   Select,
   Spin,
@@ -17,6 +20,7 @@ import {
   Alert,
   Space,
   Badge,
+  Empty,
 } from 'antd'
 import {
   CalculatorOutlined,
@@ -26,8 +30,10 @@ import {
   InfoCircleOutlined,
   TeamOutlined,
   RocketOutlined,
+  EyeOutlined,
 } from '@ant-design/icons'
-import { parseScenariosCSV, parseGpuModelsCSV, estimateGpuCount } from '../utils/csvParser'
+import { parseScenariosCSV, parseGpuModelsCSV, estimateGpuCount, parseGpuInfoCSV, parseModelInfoCSV } from '../utils/csvParser'
+import type { GpuInfoMeta, ModelInfoMeta } from '../utils/csvParser'
 import type { ScenarioRecord, GpuModelRecord } from '../types'
 
 const { Title, Text } = Typography
@@ -301,8 +307,15 @@ function GpuResultCard({
 export default function ResourceEstimator() {
   const [scenarios, setScenarios] = useState<ScenarioRecord[]>([])
   const [gpuModels, setGpuModels] = useState<GpuModelRecord[]>([])
+  const [gpuInfo, setGpuInfo] = useState<GpuInfoMeta>({ headers: [], records: [] })
+  const [modelInfo, setModelInfo] = useState<ModelInfoMeta>({ headers: [], records: [] })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  // GPU 详情弹窗状态
+  const [gpuInfoModalOpen, setGpuInfoModalOpen] = useState(false)
+  // 模型详情弹窗状态
+  const [modelInfoModalOpen, setModelInfoModalOpen] = useState(false)
 
   // 用户输入状态
   const [companySize, setCompanySize] = useState<number | null>(null)
@@ -312,16 +325,39 @@ export default function ResourceEstimator() {
   const [customUsers, setCustomUsers] = useState<number | null>(null)
   const [customRpm, setCustomRpm] = useState<number | null>(null)
 
-  // ── 加载 CSV（静态内联，支持直接打开 HTML 文件）────────────────────────────
+  // ── 加载 CSV ─────────────────────────────────────────────────────────────
   useEffect(() => {
+    // 场景和模型数据内联（?raw），直接解析
     try {
       setScenarios(parseScenariosCSV(scenariosCsvRaw))
       setGpuModels(parseGpuModelsCSV(gpuModelsCsvRaw))
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : '数据加载异常')
-    } finally {
       setLoading(false)
+      return
     }
+    // GPU Info / Model Info 表格动态 fetch（后台可随时更新）
+    const baseUrl = import.meta.env.BASE_URL.replace(/\/?$/, '/')
+
+    const fetchCsv = (filename: string) =>
+      fetch(`${baseUrl}data/${filename}`)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          return r.text()
+        })
+        .then((text) => {
+          const trimmed = text.trim()
+          // 防止 nginx SPA fallback 返回 HTML 被当做 CSV 解析
+          return trimmed.startsWith('<') ? '' : trimmed
+        })
+        .catch(() => '')
+
+    Promise.all([fetchCsv('gpu_info.csv'), fetchCsv('model_info.csv')])
+      .then(([gpuText, modelText]) => {
+        if (gpuText) setGpuInfo(parseGpuInfoCSV(gpuText))
+        if (modelText) setModelInfo(parseModelInfoCSV(modelText))
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   // ── 派生数据 ──────────────────────────────────────────────────────────────
@@ -474,9 +510,11 @@ export default function ResourceEstimator() {
               <Col xs={24} sm={12} md={8}>
                 <Form.Item
                   label={
-                    <span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       选择场景
-                      <Text type="secondary" style={{ fontSize: 12, marginLeft: 6 }}>（来自场景表）</Text>
+                      <Tooltip title="不同场景会有不同的使用人数和接口调用量，选择合适的场景，我们将会自动计算大概的使用量">
+                        <InfoCircleOutlined style={{ color: '#faad14', fontSize: 13, cursor: 'pointer' }} />
+                      </Tooltip>
                     </span>
                   }
                 >
@@ -637,7 +675,24 @@ export default function ResourceEstimator() {
           <Form layout="vertical" size="large">
             <Row gutter={[24, 0]}>
               <Col xs={24} sm={12}>
-                <Form.Item label="选择模型">
+                <Form.Item
+                  label={
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      选择模型
+                      {selectedModel && (
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<EyeOutlined />}
+                          style={{ padding: '0 4px', height: 'auto', fontSize: 12 }}
+                          onClick={() => setModelInfoModalOpen(true)}
+                        >
+                          查看详情
+                        </Button>
+                      )}
+                    </span>
+                  }
+                >
                   <Select
                     placeholder="选择 AI 模型"
                     value={selectedModel}
@@ -658,12 +713,23 @@ export default function ResourceEstimator() {
               <Col xs={24} sm={12}>
                 <Form.Item
                   label={
-                    <span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       选择显卡类型
                       {!selectedModel && (
-                        <Text type="secondary" style={{ fontSize: 12, marginLeft: 6 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
                           （请先选择模型）
                         </Text>
+                      )}
+                      {selectedGpu && (
+                        <Button
+                          type="link"
+                          size="small"
+                          icon={<EyeOutlined />}
+                          style={{ padding: '0 4px', height: 'auto', fontSize: 12 }}
+                          onClick={() => setGpuInfoModalOpen(true)}
+                        >
+                          查看详情
+                        </Button>
                       )}
                     </span>
                   }
@@ -783,6 +849,126 @@ export default function ResourceEstimator() {
           />
         )}
       </div>
+
+      {/* ── GPU 详情弹窗 ─────────────────────────────────────────────────── */}
+      <Modal
+        open={gpuInfoModalOpen}
+        onCancel={() => setGpuInfoModalOpen(false)}
+        footer={null}
+        title={
+          <Space>
+            <ThunderboltOutlined style={{ color: '#faad14' }} />
+            <span>{selectedGpu} 显卡详细信息</span>
+          </Space>
+        }
+        width={700}
+        styles={{ body: { padding: '16px 0 0' } }}
+      >
+        {(() => {
+          if (!selectedGpu) return null
+          const record = gpuInfo.records.find((r: { gpuName: string }) => r.gpuName === selectedGpu)
+          const dataHeaders = gpuInfo.headers.slice(1)
+
+          if (!record || dataHeaders.length === 0) {
+            return (
+              <Empty
+                description={
+                  gpuInfo.headers.length === 0
+                    ? 'GPU 详情数据尚未配置，请在 public/data/gpu_info.csv 中填写'
+                    : `未找到 ${selectedGpu} 的详情记录`
+                }
+                style={{ padding: '32px 0' }}
+              />
+            )
+          }
+
+          const infoRecord = record as { gpuName: string; fields: Record<string, string> }
+          return (
+            <Descriptions
+              bordered
+              column={1}
+              size="small"
+              styles={{ label: { width: 180, fontWeight: 500, background: '#fafafa' } }}
+            >
+              {dataHeaders.map((header: string) => (
+                <Descriptions.Item key={header} label={header}>
+                  {infoRecord.fields[header] || <Text type="secondary">—</Text>}
+                </Descriptions.Item>
+              ))}
+            </Descriptions>
+          )
+        })()}
+      </Modal>
+
+      {/* ── 模型详情弹窗 ──────────────────────────────────────────────────── */}
+      <Modal
+        open={modelInfoModalOpen}
+        onCancel={() => setModelInfoModalOpen(false)}
+        footer={null}
+        title={
+          <Space>
+            <RocketOutlined style={{ color: '#52c41a' }} />
+            <span>{selectedModel} 模型详细信息</span>
+          </Space>
+        }
+        width={700}
+        styles={{ body: { padding: '16px 0 0' } }}
+      >
+        {(() => {
+          if (!selectedModel) return null
+          const record = modelInfo.records.find((r) => r.modelName === selectedModel)
+          const dataHeaders = modelInfo.headers.slice(2)  // 跳过"模型名称"和"模型地址"列
+
+          if (!record) {
+            return (
+              <Empty
+                description={
+                  modelInfo.headers.length === 0
+                    ? '模型详情数据尚未配置，请在 public/data/model_info.csv 中填写'
+                    : `未找到 ${selectedModel} 的详情记录`
+                }
+                style={{ padding: '32px 0' }}
+              />
+            )
+          }
+
+          return (
+            <Descriptions
+              bordered
+              column={1}
+              size="small"
+              styles={{ label: { width: 180, fontWeight: 500, background: '#fafafa' } }}
+            >
+              {/* 模型地址行：支持多链接点击跳转 */}
+              <Descriptions.Item label={modelInfo.headers[1] ?? '模型地址'}>
+                {record.urls.length === 0 ? (
+                  <Text type="secondary">—</Text>
+                ) : (
+                  <Space wrap>
+                    {record.urls.map((url, idx) => (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ wordBreak: 'break-all' }}
+                      >
+                        {url}
+                      </a>
+                    ))}
+                  </Space>
+                )}
+              </Descriptions.Item>
+              {/* 其余扩展字段 */}
+              {dataHeaders.map((header) => (
+                <Descriptions.Item key={header} label={header}>
+                  {record.fields[header] || <Text type="secondary">—</Text>}
+                </Descriptions.Item>
+              ))}
+            </Descriptions>
+          )
+        })()}
+      </Modal>
     </div>
   )
 }

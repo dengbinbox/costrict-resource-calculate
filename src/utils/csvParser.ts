@@ -1,5 +1,31 @@
 import type { ScenarioRecord, GpuModelRecord } from '../types'
 
+/** GPU 详细信息（通用，键=表头，值=单元格内容） */
+export interface GpuInfoRecord {
+  gpuName: string
+  fields: Record<string, string>  // 表头 → 值（不含第一列 GPU 名称）
+}
+
+/** GPU Info 表格的元数据（表头顺序等） */
+export interface GpuInfoMeta {
+  headers: string[]               // 全部表头（含第一列"GPU名称"列）
+  records: GpuInfoRecord[]
+}
+
+/** 模型详细信息（通用，键=表头，值=单元格内容） */
+export interface ModelInfoRecord {
+  modelName: string
+  /** 第二列：多个 URL，以 | 分隔；解析后为 URL 数组 */
+  urls: string[]
+  fields: Record<string, string>  // 除第一、二列之外的其他列：表头 → 值
+}
+
+/** Model Info 表格的元数据（表头顺序等） */
+export interface ModelInfoMeta {
+  headers: string[]               // 全部表头（含第一列"模型名称"及第二列"模型地址"列）
+  records: ModelInfoRecord[]
+}
+
 /** 解析数值，空字符串或非法值返回 null */
 function parseNum(val: string): number | null {
   const trimmed = val.trim()
@@ -116,5 +142,75 @@ export function estimateGpuCount(
     ttftP95: base.ttftP95,
     ttftP90: base.ttftP90,
     tokenSpeedAvg: base.tokenSpeedAvg,
+  }
+}
+
+/**
+ * 解析 GPU Info CSV（通用，不假设列结构）
+ * 第一行是表头，第一列是 GPU 名称
+ */
+export function parseGpuInfoCSV(text: string): GpuInfoMeta {
+  const rows = parseCSV(text)
+  if (rows.length === 0) return { headers: [], records: [] }
+
+  const headers = rows[0].map((h) => h.trim())
+  const gpuNameHeader = headers[0] ?? 'GPU'
+  const dataHeaders = headers.slice(1)
+
+  const records: GpuInfoRecord[] = rows.slice(1)
+    .filter((cols) => (cols[0]?.trim() ?? '') !== '')
+    .map((cols) => {
+      const fields: Record<string, string> = {}
+      dataHeaders.forEach((h, i) => {
+        fields[h] = cols[i + 1]?.trim() ?? ''
+      })
+      return {
+        gpuName: cols[0].trim(),
+        fields,
+      }
+    })
+
+  // 在返回的 headers 中用"GPU名称"替代原始第一列标题
+  return {
+    headers: [gpuNameHeader, ...dataHeaders],
+    records,
+  }
+}
+
+/**
+ * 解析 Model Info CSV
+ * 格式：第一列=模型名称，第二列=模型地址（多个URL以 | 分隔），其余列为任意扩展字段
+ */
+export function parseModelInfoCSV(text: string): ModelInfoMeta {
+  const rows = parseCSV(text)
+  if (rows.length === 0) return { headers: [], records: [] }
+
+  const headers = rows[0].map((h) => h.trim())
+  const dataHeaders = headers.slice(2)   // 第三列起为扩展字段
+
+  const records: ModelInfoRecord[] = rows.slice(1)
+    .filter((cols) => (cols[0]?.trim() ?? '') !== '')
+    .map((cols) => {
+      const rawUrls = cols[1]?.trim() ?? ''
+      const urls = rawUrls
+        .split('|')
+        .map((u) => u.trim())
+        .filter((u) => u !== '')
+
+      const fields: Record<string, string> = {}
+      dataHeaders.forEach((h, i) => {
+        fields[h] = cols[i + 2]?.trim() ?? ''
+      })
+
+      return {
+        modelName: cols[0].trim(),
+        urls,
+        fields,
+      }
+    })
+
+  return {
+    headers,
+    records,
   }
 }
