@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
+import scenariosCsvRaw from '../../public/data/scenarios.csv?raw'
+import gpuModelsCsvRaw from '../../public/data/gpu_models.csv?raw'
 import {
   Card,
   Col,
@@ -310,28 +312,16 @@ export default function ResourceEstimator() {
   const [customUsers, setCustomUsers] = useState<number | null>(null)
   const [customRpm, setCustomRpm] = useState<number | null>(null)
 
-  // ── 加载 CSV ──────────────────────────────────────────────────────────────
+  // ── 加载 CSV（静态内联，支持直接打开 HTML 文件）────────────────────────────
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [scenariosRes, gpuRes] = await Promise.all([
-          fetch('/data/scenarios.csv'),
-          fetch('/data/gpu_models.csv'),
-        ])
-        if (!scenariosRes.ok || !gpuRes.ok) throw new Error('CSV 文件加载失败')
-        const [scenariosText, gpuText] = await Promise.all([
-          scenariosRes.text(),
-          gpuRes.text(),
-        ])
-        setScenarios(parseScenariosCSV(scenariosText))
-        setGpuModels(parseGpuModelsCSV(gpuText))
-      } catch (e) {
-        setLoadError(e instanceof Error ? e.message : '数据加载异常')
-      } finally {
-        setLoading(false)
-      }
+    try {
+      setScenarios(parseScenariosCSV(scenariosCsvRaw))
+      setGpuModels(parseGpuModelsCSV(gpuModelsCsvRaw))
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : '数据加载异常')
+    } finally {
+      setLoading(false)
     }
-    loadData()
   }, [])
 
   // ── 派生数据 ──────────────────────────────────────────────────────────────

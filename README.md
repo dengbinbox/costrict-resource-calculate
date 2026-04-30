@@ -1,73 +1,153 @@
-# React + TypeScript + Vite
+# CoStrict AS — AI 资源估算工具
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+基于 React + TypeScript + Vite 构建的 GPU 资源预估工具，支持根据企业规模、使用场景动态估算所需 GPU 数量和部署成本。
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 功能特性
 
-## React Compiler
+- 📊 **场景选择**：预置多种典型企业使用场景（高峰 / 低峰）
+- 🔢 **参数配置**：支持自定义公司规模、用户数、RPM
+- 💡 **自动估算**：根据 GPU 型号、并发能力自动计算所需卡数与机器数
+- 💰 **成本展示**：实时展示预估采购成本
+- ⚡ **离线可用**：所有数据在构建时内联，无需后端服务
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 快速开始
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 环境要求
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- npm 9+
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 本地开发
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器（http://localhost:5173）
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 构建生产包
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+构建产物输出到 `dist/` 目录。
+
+---
+
+## Docker 部署（推荐）
+
+项目使用 Nginx 容器提供静态文件服务，支持无需 Node 环境的生产部署。
+
+### 构建说明
+
+由于 CSV 数据通过 Vite 的 `?raw` 导入在**编译时**内联进 JS Bundle，无需运行时 fetch 请求，因此镜像中不包含 Node.js 环境。
+
+### 部署步骤
+
+**第一步：构建前端产物**
+
+```bash
+npm run build
+```
+
+**第二步：构建 Docker 镜像**
+
+```bash
+docker build -t costrict-as:latest .
+```
+
+**第三步：启动容器**
+
+```bash
+# 监听宿主机 8080 端口
+docker run -d \
+  --name costrict-as \
+  -p 8080:80 \
+  --restart unless-stopped \
+  costrict-as:latest
+```
+
+访问 [http://localhost:8080](http://localhost:8080) 即可使用。
+
+### 镜像说明
+
+| 文件 | 说明 |
+|------|------|
+| [`Dockerfile`](Dockerfile) | 基于 `nginx:1.27.1`，将 `dist/` 拷入镜像 |
+| [`nginx.conf`](nginx.conf) | SPA 路由回退 + gzip 压缩 + 静态资源长期缓存 |
+| [`.dockerignore`](.dockerignore) | 排除源码、依赖等，只打包 `dist/` 和配置文件 |
+
+### 常用 Docker 命令
+
+```bash
+# 查看运行状态
+docker ps -f name=costrict-as
+
+# 查看日志
+docker logs costrict-as
+
+# 停止并删除容器
+docker rm -f costrict-as
+
+# 重新构建并部署
+npm run build && docker build -t costrict-as:latest . && docker run -d --name costrict-as -p 8080:80 costrict-as:latest
+```
+
+---
+
+## 项目结构
+
+```
+costrict-as/
+├── public/
+│   └── data/
+│       ├── scenarios.csv     # 使用场景数据（编译时内联）
+│       └── gpu_models.csv    # GPU 型号数据（编译时内联）
+├── src/
+│   ├── pages/
+│   │   └── ResourceEstimator.tsx   # 主页面组件
+│   ├── utils/
+│   │   └── csvParser.ts            # CSV 解析工具
+│   └── types/
+│       └── index.ts                # 类型定义
+├── nginx.conf        # Nginx 配置
+├── Dockerfile        # Docker 镜像构建文件
+├── .dockerignore     # Docker 构建上下文排除规则
+└── vite.config.ts    # Vite 构建配置
+```
+
+---
+
+## 数据文件说明
+
+### `public/data/scenarios.csv`
+
+使用场景参考数据，字段：
+
+| 字段 | 说明 |
+|------|------|
+| 场景 | 场景名称 |
+| 全公司人数 | 基准企业总人数 |
+| 使用人数 | 活跃用户数 |
+| RPM | 每分钟请求数 |
+| 并发 | 并发请求数（可为空） |
+
+### `public/data/gpu_models.csv`
+
+GPU 型号及性能参数，修改此文件后重新执行 `npm run build` 即可更新数据。
+
+---
+
+## 技术栈
+
+- **框架**：React 19 + TypeScript
+- **构建工具**：Vite 8
+- **UI 组件库**：Ant Design 6
+- **部署**：Nginx + Docker
