@@ -90,7 +90,9 @@ interface GpuResultCardProps {
   title: string
   subtitle: string
   gpuCount: number | null
+  gpuCountExact: number | null
   machineCount: number | null
+  gpuPerMachine: number | null
   gpuPrice: number | null
   perfData: PerfTooltipProps | null
   icon: React.ReactNode
@@ -102,7 +104,9 @@ function GpuResultCard({
   title,
   subtitle,
   gpuCount,
+  gpuCountExact,
   machineCount,
+  gpuPerMachine,
   gpuPrice,
   perfData,
   icon,
@@ -158,7 +162,30 @@ function GpuResultCard({
           >
             <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 4 }}>所需机器数</div>
             {machineCount != null ? (
-              <div style={{ fontSize: 24, fontWeight: 700, color }}>{machineCount}</div>
+              <Tooltip
+                title={
+                  gpuPerMachine != null
+                    ? `单台机器配备 ${gpuPerMachine} 张显卡`
+                    : '单台显卡数据未知'
+                }
+                placement="top"
+              >
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color,
+                    cursor: 'help',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 3,
+                  }}
+                >
+                  {machineCount}
+                  <InfoCircleOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
+                </div>
+              </Tooltip>
             ) : (
               <div style={{ fontSize: 24, fontWeight: 700, color: '#bfbfbf' }}>N/A</div>
             )}
@@ -180,10 +207,25 @@ function GpuResultCard({
             <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 4 }}>所需显卡数</div>
             {gpuCount != null && perfData ? (
               <Tooltip
-                title={<PerfTooltipContent {...perfData} />}
+                title={
+                  <div style={{ minWidth: 220 }}>
+                    {gpuCountExact != null && (
+                      <div style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>精确计算值</Text>
+                        <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>
+                          {gpuCountExact.toFixed(4)} 张
+                        </div>
+                        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                          →取整后：{gpuCount} 张
+                        </Text>
+                      </div>
+                    )}
+                    <PerfTooltipContent {...perfData} />
+                  </div>
+                }
                 color="#001529"
                 placement="top"
-                overlayStyle={{ maxWidth: 260 }}
+                overlayStyle={{ maxWidth: 280 }}
               >
                 <div
                   style={{
@@ -679,7 +721,9 @@ export default function ResourceEstimator() {
                   title="预估显卡方案"
                   subtitle="基于场景数据推算"
                   gpuCount={estimatedGpuResult?.gpuCount ?? null}
+                  gpuCountExact={estimatedGpuResult?.gpuCountExact ?? null}
                   machineCount={estimatedGpuResult?.machineCount ?? null}
+                  gpuPerMachine={gpuModels.find((r) => r.gpuName === selectedGpu && r.modelName === selectedModel)?.gpuPerMachine ?? null}
                   gpuPrice={gpuUnitPrice}
                   perfData={estimatedGpuResult ?? null}
                   icon={<CalculatorOutlined />}
@@ -691,7 +735,9 @@ export default function ResourceEstimator() {
                   title="自定义数据方案"
                   subtitle="基于自定义 RPM 推算"
                   gpuCount={customGpuResult?.gpuCount ?? null}
+                  gpuCountExact={customGpuResult?.gpuCountExact ?? null}
                   machineCount={customGpuResult?.machineCount ?? null}
+                  gpuPerMachine={gpuModels.find((r) => r.gpuName === selectedGpu && r.modelName === selectedModel)?.gpuPerMachine ?? null}
                   gpuPrice={gpuUnitPrice}
                   perfData={customGpuResult ?? null}
                   icon={<RocketOutlined />}
