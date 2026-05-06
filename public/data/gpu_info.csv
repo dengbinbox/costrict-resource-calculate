@@ -1,6 +1,6 @@
 显卡名称,单卡显存,整机显存,整机FP8算力,整机FP32算力,整机参考价,参考来源
 L20,48GB GDDR6,384GB,1.91 PFLOPS,478 TFLOPS,,https://nvidia.csdn.net/69490dda5b9f5f317819c1fc.html
-H20,96GB HBM3,768GB,2.37 PFLOPS,352 TFLOPS,¥110–125 万,https://nvidia.csdn.net/69490dda5b9f5f317819c1fc.html
+H20-3e,96GB HBM3,768GB,2.37 PFLOPS,352 TFLOPS,¥110–125 万,https://nvidia.csdn.net/69490dda5b9f5f317819c1fc.html
 H100,80GB HBM3,640GB,26.7 PFLOPS,420 TFLOPS,¥220–250 万,https://www.nvidia.com/en-us/data-center/h100/
 H200,141GB HBM3e,1128GB,26.7 PFLOPS,420 TFLOPS,¥250–270 万,https://www.nvidia.com/en-us/data-center/h200/
 B300,288GB HBM3e,2304GB,72 PFLOPS,600 TFLOPS,¥450–500 万,https://www.nvidia.com/en-us/data-center/hgx/

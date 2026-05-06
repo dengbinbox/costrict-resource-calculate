@@ -624,13 +624,41 @@ export default function ResourceEstimator() {
                     </span>
                   }
                 >
-                  <InputNumber
-                    placeholder="自定义使用人数"
-                    min={1}
-                    value={customUsers}
-                    onChange={(v) => setCustomUsers(v)}
-                    style={{ width: '100%' }}
-                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <InputNumber
+                      placeholder="自定义使用人数"
+                      min={1}
+                      value={customUsers}
+                      onChange={(v) => setCustomUsers(v)}
+                      style={{ flex: 1 }}
+                    />
+                    <Tooltip
+                      title={
+                        companySize
+                          ? `占公司总人数 (${companySize} 人) 的百分比，修改后自动计算使用人数`
+                          : '请先填写公司人数后再使用百分比'
+                      }
+                    >
+                      <InputNumber
+                        placeholder="百分比"
+                        min={0}
+                        max={100}
+                        addonAfter="%"
+                        value={
+                          customUsers != null && companySize
+                            ? Math.round((customUsers / companySize) * 10000) / 100
+                            : undefined
+                        }
+                        onChange={(v) => {
+                          if (v != null && companySize) {
+                            setCustomUsers(Math.max(1, Math.round((v / 100) * companySize)))
+                          }
+                        }}
+                        disabled={!companySize}
+                        style={{ width: 80 }}
+                      />
+                    </Tooltip>
+                  </div>
                 </Form.Item>
               </Col>
 
@@ -722,7 +750,7 @@ export default function ResourceEstimator() {
                           style={{ padding: '0 4px', height: 'auto', fontSize: 12 }}
                           onClick={() => setModelInfoModalOpen(true)}
                         >
-                          查看详情
+                          查看模型详情
                         </Button>
                       )}
                     </span>
@@ -763,7 +791,7 @@ export default function ResourceEstimator() {
                           style={{ padding: '0 4px', height: 'auto', fontSize: 12 }}
                           onClick={() => setGpuInfoModalOpen(true)}
                         >
-                          查看详情
+                          查看显卡详情
                         </Button>
                       )}
                     </span>
