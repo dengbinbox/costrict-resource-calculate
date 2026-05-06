@@ -31,6 +31,7 @@ import {
   TeamOutlined,
   RocketOutlined,
   EyeOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons'
 import { parseScenariosCSV, parseGpuModelsCSV, estimateGpuCount, parseGpuInfoCSV, parseModelInfoCSV } from '../utils/csvParser'
 import type { GpuInfoMeta, ModelInfoMeta } from '../utils/csvParser'
@@ -388,13 +389,22 @@ export default function ResourceEstimator() {
   /** 预估同时使用人数 */
   const estimatedUsers = useMemo(() => {
     if (!sceneRecord || !companySize) return null
-    return Math.round((sceneRecord.activeUsers / sceneRecord.totalEmployees) * companySize)
+    let effectiveCompanySize = companySize
+    if (companySize < 15) effectiveCompanySize = 30
+    else if (companySize < 50) effectiveCompanySize = 50
+    else if (companySize < 100) effectiveCompanySize = 100
+    let users = Math.round((sceneRecord.activeUsers / sceneRecord.totalEmployees) * effectiveCompanySize)
+    if (companySize < 15 && users > companySize) {
+      users = companySize
+    }
+    return Math.max(1, users)
   }, [sceneRecord, companySize])
 
   /** 预估使用 RPM */
   const estimatedRpm = useMemo(() => {
     if (!sceneRecord || estimatedUsers == null) return null
-    return (sceneRecord.rpm / sceneRecord.activeUsers) * estimatedUsers
+    const minRpm = sceneRecord.rpm / sceneRecord.activeUsers
+    return Math.max(minRpm, (sceneRecord.rpm / sceneRecord.activeUsers) * estimatedUsers)
   }, [sceneRecord, estimatedUsers])
 
   /** 自定义使用 RPM（如果用户未输入，则通过公式计算） */
@@ -507,7 +517,7 @@ export default function ResourceEstimator() {
                 <Form.Item
                   label={
                     <span>
-                      用户公司人数
+                      公司开发人数
                       <Text type="secondary" style={{ fontSize: 12, marginLeft: 6 }}>（人）</Text>
                     </span>
                   }
@@ -571,7 +581,28 @@ export default function ResourceEstimator() {
               {/* 预估结果展示 */}
               {sceneRecord && companySize && (
                 <Col xs={24} sm={12} md={8}>
-                  <Form.Item label="预估结果">
+                  <Form.Item
+                    label={
+                      <span>
+                        预估结果
+                        <Tooltip
+                          title={
+                            <div style={{ maxWidth: 320 }}>
+                              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>算法说明：</div>
+                              <div>{'根据场景人数比例预估人数，人数低于一定数量则调整基数计算'}</div>
+                              <div>1. 公司人数 ≥ 100：按实际人数计算</div>
+                              <div>{'2. 公司人数 < 100：按 100 人计算'}</div>
+                              <div>{'3. 公司人数 < 50：按 50 人计算'}</div>
+                              <div>{'4. 公司人数 < 15：按 30 人计算；若结果 > 实际人数，则等于实际人数'}</div>
+                              <div>5. 预估同时使用人数最小值为 1</div>
+                            </div>
+                          }
+                        >
+                          <ExclamationCircleOutlined style={{ marginLeft: 4, color: '#faad14', cursor: 'pointer' }} />
+                        </Tooltip>
+                      </span>
+                    }
+                  >
                     <div
                       style={{
                         display: 'flex',
