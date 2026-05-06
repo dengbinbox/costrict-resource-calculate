@@ -122,7 +122,12 @@ function GpuResultCard({
   color,
   isCustom = false,
 }: GpuResultCardProps) {
-  const cost = gpuCount != null && gpuPrice != null ? gpuCount * gpuPrice : null
+  const displayMachineCount = machineCount === 0 ? 1 : machineCount
+  const displayGpuCount = machineCount === 0 ? (gpuPerMachine ?? 0) : gpuCount
+  const cost = (() => {
+    if (displayGpuCount == null || gpuPrice == null) return null
+    return displayGpuCount * gpuPrice
+  })()
 
   return (
     <Card
@@ -191,7 +196,7 @@ function GpuResultCard({
                     gap: 3,
                   }}
                 >
-                  {machineCount}
+                  {displayMachineCount}
                   <InfoCircleOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
                 </div>
               </Tooltip>
@@ -225,7 +230,7 @@ function GpuResultCard({
                           {gpuCountExact.toFixed(4)} 张
                         </div>
                         <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
-                          →取整后：{gpuCount} 张
+                          →取整后：{displayGpuCount} 张
                         </Text>
                       </div>
                     )}
@@ -248,7 +253,7 @@ function GpuResultCard({
                     gap: 3,
                   }}
                 >
-                  {gpuCount}
+                  {displayGpuCount}
                   <InfoCircleOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
                 </div>
               </Tooltip>
