@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import scenariosCsvRaw from '../../public/data/scenarios.csv?raw'
 import gpuModelsCsvRaw from '../../public/data/gpu_models.csv?raw'
-import capabilityCsvRaw from '../../public/data/model-capability_leaderboard.csv?raw'
+import capabilityCsvRaw from '../../public/data/model_capability_leaderboard.csv?raw'
 import {
   Button,
   Card,
