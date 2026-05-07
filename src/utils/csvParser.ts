@@ -66,6 +66,7 @@ export function parseScenariosCSV(text: string): ScenarioRecord[] {
 }
 
 /** 解析显卡模型 CSV */
+/** 解析显卡模型 CSV */
 export function parseGpuModelsCSV(text: string): GpuModelRecord[] {
   const rows = parseCSV(text)
   // 跳过表头
@@ -81,10 +82,10 @@ export function parseGpuModelsCSV(text: string): GpuModelRecord[] {
     ttftP99: parseNum(cols[8] ?? ''),
     ttftP95: parseNum(cols[9] ?? ''),
     ttftP90: parseNum(cols[10] ?? ''),
-    tokenSpeedAvg: parseNum(cols[11] ?? ''),
+    avgTTFT: parseNum(cols[11] ?? ''),
+    tokenSpeedAvg: parseNum(cols[12] ?? ''),
   })).filter((r) => r.gpuName !== '' && r.modelName !== '')
 }
-
 /**
  * 根据所需 RPM 计算需要多少张显卡
  *
@@ -109,6 +110,7 @@ export function estimateGpuCount(
   ttftP99: number | null
   ttftP95: number | null
   ttftP90: number | null
+  avgTTFT: number | null
   tokenSpeedAvg: number | null
 } | null {
   const matched = records.filter(
@@ -142,6 +144,7 @@ export function estimateGpuCount(
     ttftP99: base.ttftP99,
     ttftP95: base.ttftP95,
     ttftP90: base.ttftP90,
+    avgTTFT: base.avgTTFT,
     tokenSpeedAvg: base.tokenSpeedAvg,
   }
 }

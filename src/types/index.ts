@@ -21,6 +21,7 @@ export interface GpuModelRecord {
   ttftP99: number | null    // TTFT-P99 (ms)
   ttftP95: number | null    // TTFT-P95(ms)
   ttftP90: number | null    // TTFT-P90(ms)
+  avgTTFT: number | null    // Avg TTFT (ms)
   tokenSpeedAvg: number | null  // token speed avg (t/s)
 }
 /** 估算结果（显卡数量 + 性能指标） */
@@ -29,6 +30,7 @@ export interface GpuEstimation {
   ttftP99: number | null
   ttftP95: number | null
   ttftP90: number | null
+  avgTTFT: number | null
   tokenSpeedAvg: number | null
   totalGpuCount: number  // 总卡数（单台*台数）
 }

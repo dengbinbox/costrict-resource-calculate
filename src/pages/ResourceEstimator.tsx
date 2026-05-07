@@ -64,14 +64,15 @@ interface PerfTooltipProps {
   ttftP99: number | null
   ttftP95: number | null
   ttftP90: number | null
+  avgTTFT: number | null
   tokenSpeedAvg: number | null
 }
-
-function PerfTooltipContent({ ttftP99, ttftP95, ttftP90, tokenSpeedAvg }: PerfTooltipProps) {
+function PerfTooltipContent({ ttftP99, ttftP95, ttftP90, avgTTFT, tokenSpeedAvg }: PerfTooltipProps) {
   const items = [
     { label: 'TTFT-P99', value: fmt(ttftP99, ' ms'), color: '#ff4d4f' },
     { label: 'TTFT-P95', value: fmt(ttftP95, ' ms'), color: '#fa8c16' },
     { label: 'TTFT-P90', value: fmt(ttftP90, ' ms'), color: '#fadb14' },
+    { label: 'Avg TTFT', value: fmt(avgTTFT, ' ms'), color: '#1890ff' },
     { label: 'Token Speed Avg', value: fmt(tokenSpeedAvg, ' t/s'), color: '#52c41a' },
   ]
   return (
