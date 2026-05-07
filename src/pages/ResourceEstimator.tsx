@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import scenariosCsvRaw from '../../public/data/scenarios.csv?raw'
 import gpuModelsCsvRaw from '../../public/data/gpu_models.csv?raw'
+import capabilityCsvRaw from '../../public/data/model-capability_leaderboard.csv?raw'
 import {
   Button,
   Card,
@@ -32,10 +33,14 @@ import {
   RocketOutlined,
   EyeOutlined,
   ExclamationCircleOutlined,
+  BarChartOutlined,
+  TrophyOutlined,
+  UpOutlined,
+  DownOutlined,
 } from '@ant-design/icons'
-import { parseScenariosCSV, parseGpuModelsCSV, estimateGpuCount, parseGpuInfoCSV, parseModelInfoCSV } from '../utils/csvParser'
+import { parseScenariosCSV, parseGpuModelsCSV, estimateGpuCount, parseGpuInfoCSV, parseModelInfoCSV, parseModelCapabilityCSV } from '../utils/csvParser'
 import type { GpuInfoMeta, ModelInfoMeta } from '../utils/csvParser'
-import type { ScenarioRecord, GpuModelRecord } from '../types'
+import type { ScenarioRecord, GpuModelRecord, ModelCapabilityRecord } from '../types'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -315,6 +320,7 @@ export default function ResourceEstimator() {
   const [gpuModels, setGpuModels] = useState<GpuModelRecord[]>([])
   const [gpuInfo, setGpuInfo] = useState<GpuInfoMeta>({ headers: [], records: [] })
   const [modelInfo, setModelInfo] = useState<ModelInfoMeta>({ headers: [], records: [] })
+  const [capabilityRecords, setCapabilityRecords] = useState<ModelCapabilityRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -324,12 +330,18 @@ export default function ResourceEstimator() {
   const [modelInfoModalOpen, setModelInfoModalOpen] = useState(false)
 
   // 用户输入状态
-  const [companySize, setCompanySize] = useState<number | null>(null)
+  const [companySize, setCompanySize] = useState<number | null>(300)
   const [selectedScene, setSelectedScene] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
   const [selectedGpu, setSelectedGpu] = useState<string | null>(null)
   const [customUsers, setCustomUsers] = useState<number | null>(null)
   const [customRpm, setCustomRpm] = useState<number | null>(null)
+
+  // 自定义输入折叠状态（默认折叠）
+  const [showCustom, setShowCustom] = useState(false)
+  // 模型能力榜单柱状图折叠状态（默认折叠）
+  const [showBarChart, setShowBarChart] = useState(false)
+
 
   // ── 加载 CSV ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -354,6 +366,7 @@ export default function ResourceEstimator() {
       const defaultScene = sorted.find((s) => s.priority === 0)
       if (defaultScene) setSelectedScene(defaultScene.scene)
       setGpuModels(parseGpuModelsCSV(gpuModelsCsvRaw))
+      setCapabilityRecords(parseModelCapabilityCSV(capabilityCsvRaw))
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : '数据加载异常')
       setLoading(false)
@@ -638,7 +651,22 @@ export default function ResourceEstimator() {
           </Form>
         </Card>
 
+        {/* ── 自定义输入折叠按钮 ─────────────────────────────────────── */}
+        <div style={{ marginBottom: 24, textAlign: 'center' }}>
+          <Tooltip title="如果你需要自定义使用人数或 RPM，可点此展开进行手动设置">
+            <Button
+              type="dashed"
+              icon={<RocketOutlined />}
+              onClick={() => setShowCustom(!showCustom)}
+              style={{ borderRadius: 8 }}
+            >
+              {showCustom ? '收起自定义人数/RPM方案' : '展开自定义人数/RPM方案'}
+            </Button>
+          </Tooltip>
+        </div>
+
         {/* ── Section 2: 自定义输入 ─────────────────────────────────────── */}
+        {showCustom && (
         <Card
           bordered={false}
           style={{ borderRadius: 16, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}
@@ -646,7 +674,7 @@ export default function ResourceEstimator() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <RocketOutlined style={{ fontSize: 18, color: '#722ed1' }} />
             <Title level={5} style={{ margin: 0 }}>自定义输入</Title>
-            <Text type="secondary" style={{ fontSize: 13 }}>（可选，用于自定义估算对比）</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>（用于自定义估算对比）</Text>
           </div>
 
           <Form layout="vertical" size="large">
@@ -760,6 +788,7 @@ export default function ResourceEstimator() {
             </Row>
           </Form>
         </Card>
+        )}
 
         {/* ── Section 3: 模型 & 显卡选择 ──────────────────────────────────── */}
         <Card
@@ -769,6 +798,15 @@ export default function ResourceEstimator() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <DatabaseOutlined style={{ fontSize: 18, color: '#13c2c2' }} />
             <Title level={5} style={{ margin: 0 }}>模型 & 显卡选择</Title>
+            <Button
+              type="link"
+              size="small"
+              icon={showBarChart ? <UpOutlined /> : <DownOutlined />}
+              onClick={() => setShowBarChart(!showBarChart)}
+              style={{ marginLeft: 'auto', fontSize: 12 }}
+            >
+              {showBarChart ? '收起能力榜单' : '展开能力榜单'}
+            </Button>
           </div>
 
           <Form layout="vertical" size="large">
@@ -860,6 +898,237 @@ export default function ResourceEstimator() {
           </Form>
         </Card>
 
+        {/* ── 模型能力榜单柱状图 ───────────────────────────────────────────── */}
+        {showBarChart && capabilityRecords.length > 0 && (
+          <Card
+            bordered={false}
+            style={{ borderRadius: 16, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+              <BarChartOutlined style={{ fontSize: 18, color: '#eb2f96' }} />
+              <Title level={5} style={{ margin: 0 }}>模型能力榜单</Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                （点击柱状条快速选择模型）
+              </Text>
+            </div>
+
+            <div style={{ padding: '0 8px' }}>
+              {(() => {
+                return capabilityRecords.map((record) => {
+                  const barWidth = Math.max(3, record.capability)
+                  const isAvailable = allModels.includes(record.modelName)
+                  const isSelected = selectedModel === record.modelName
+
+                  // 构造柱状条 tooltip 内容
+                  const barTooltipLines: string[] = []
+                  if (record.comment) barTooltipLines.push(`💬 ${record.comment}`)
+                  barTooltipLines.push(`能力分数: ${record.capability}`)
+                  if (isAvailable) {
+                    barTooltipLines.push('点击可选择此模型')
+                  } else {
+                    barTooltipLines.push('⚠ 此模型暂不支持在显卡模型中选择')
+                  }
+
+                  return (
+                    <div
+                      key={record.modelName}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginBottom: 12,
+                        gap: 12,
+                      }}
+                    >
+                      {/* 模型名称标签（hover 显示注释） */}
+                      <Tooltip
+                        title={
+                          <div>
+                            <div style={{ fontWeight: 600, marginBottom: 4 }}>{record.modelName}</div>
+                            {record.comment && (
+                              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginBottom: 4 }}>
+                                {record.comment}
+                              </div>
+                            )}
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                              能力分数: {record.capability}
+                            </div>
+                          </div>
+                        }
+                        color="#001529"
+                      >
+                        <div
+                          style={{
+                            width: 140,
+                            minWidth: 140,
+                            textAlign: 'right',
+                            fontSize: 13,
+                            fontWeight: isSelected ? 700 : 500,
+                            color: isAvailable ? '#262626' : '#bfbfbf',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            cursor: 'help',
+                          }}
+                        >
+                          {isSelected && (
+                            <Tag color="#eb2f96" style={{ marginRight: 4, fontSize: 10, lineHeight: '16px' }}>
+                              当前
+                            </Tag>
+                          )}
+                          {record.modelName}
+                        </div>
+                      </Tooltip>
+
+                      {/* 柱状条轨道 + 柱状条 */}
+                      <div style={{ flex: 1, position: 'relative', height: 32 }}>
+                        <Tooltip title={barTooltipLines.join('  ·  ')} color="#001529" placement="right">
+                          <div
+                            style={{
+                              height: 32,
+                              background: isSelected
+                                ? 'linear-gradient(90deg, #eb2f96 0%, #f759ab 100%)'
+                                : isAvailable
+                                  ? 'linear-gradient(90deg, #1677ff 0%, #69b1ff 100%)'
+                                  : 'linear-gradient(90deg, #d9d9d9 0%, #e8e8e8 100%)',
+                              borderRadius: 6,
+                              width: `${barWidth}%`,
+                              minWidth: 30,
+                              cursor: isAvailable ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'flex-end',
+                              paddingRight: 10,
+                              transition: 'all 0.2s ease',
+                              boxShadow: isAvailable
+                                ? '0 2px 8px rgba(22, 119, 255, 0.2)'
+                                : '0 1px 4px rgba(0,0,0,0.08)',
+                            }}
+                            onClick={() => {
+                              if (isAvailable) {
+                                setSelectedModel(record.modelName)
+                                setSelectedGpu(null)
+                              }
+                            }}
+                            onMouseEnter={(e) => {
+                              if (isAvailable) {
+                                e.currentTarget.style.transform = 'scaleY(1.08)'
+                                e.currentTarget.style.boxShadow = '0 4px 16px rgba(22, 119, 255, 0.35)'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isAvailable) {
+                                e.currentTarget.style.transform = 'scaleY(1)'
+                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(22, 119, 255, 0.2)'
+                              }
+                            }}
+                          >
+                            {/* 能力分数 */}
+                            <span
+                              style={{
+                                color: isAvailable ? '#fff' : '#8c8c8c',
+                                fontWeight: 700,
+                                fontSize: 13,
+                                textShadow: isAvailable ? '0 1px 2px rgba(0,0,0,0.2)' : 'none',
+                              }}
+                            >
+                              {record.capability}
+                            </span>
+
+                            {/* 奖杯图标（满分） */}
+                            {record.capability === 100 && (
+                              <TrophyOutlined
+                                style={{
+                                  color: '#ffd700',
+                                  fontSize: 16,
+                                  marginLeft: 6,
+                                  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                                }}
+                              />
+                            )}
+                          </div>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+
+            {/* 图例 */}
+            <div style={{ display: 'flex', gap: 16, marginTop: 8, paddingLeft: 152 }}>
+              <Space size={4}>
+                <div
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 3,
+                    background: 'linear-gradient(90deg, #1677ff 0%, #69b1ff 100%)',
+                  }}
+                />
+                <Text style={{ fontSize: 12, color: '#8c8c8c' }}>可选模型</Text>
+              </Space>
+              <Space size={4}>
+                <div
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 3,
+                    background: 'linear-gradient(90deg, #eb2f96 0%, #f759ab 100%)',
+                  }}
+                />
+                <Text style={{ fontSize: 12, color: '#8c8c8c' }}>当前选中</Text>
+              </Space>
+              <Space size={4}>
+                <div
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 3,
+                    background: 'linear-gradient(90deg, #d9d9d9 0%, #e8e8e8 100%)',
+                  }}
+                />
+                <Text style={{ fontSize: 12, color: '#8c8c8c' }}>暂不可选</Text>
+              </Space>
+            </div>
+
+            {/* 选中模型的详情（来自 model_info.csv） */}
+            {selectedModel && (() => {
+              const infoRecord = modelInfo.records.find((r) => r.modelName === selectedModel)
+              if (!infoRecord) return null
+              const infoHeaders = modelInfo.headers.slice(2)  // 跳过"模型名称"和"模型地址"
+              if (infoHeaders.length === 0) return null
+
+              return (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: '12px 16px',
+                    background: '#fff7fa',
+                    borderRadius: 10,
+                    border: '1px solid #ffd8e8',
+                  }}
+                >
+                  <Text strong style={{ fontSize: 13, color: '#eb2f96' }}>
+                    {selectedModel} 详细信息
+                  </Text>
+                  <Row gutter={[12, 8]} style={{ marginTop: 8 }}>
+                    {infoHeaders.map((h) => (
+                      <Col xs={12} sm={8} md={6} key={h}>
+                        <div style={{ padding: '6px 10px', background: '#fff', borderRadius: 6 }}>
+                          <div style={{ fontSize: 11, color: '#8c8c8c' }}>{h}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#262626' }}>
+                            {infoRecord.fields[h] || <Text type="secondary">—</Text>}
+                          </div>
+                        </div>
+                      </Col>
+                    ))}
+                  </Row>
+                </div>
+              )
+            })()}
+          </Card>
+        )}
+
         {/* ── Section 4: 估算结果 ──────────────────────────────────────────── */}
         {isConfigComplete ? (
           <>
@@ -871,7 +1140,7 @@ export default function ResourceEstimator() {
             </Divider>
 
             <Row gutter={[20, 20]}>
-              <Col xs={24} md={12}>
+              <Col xs={24} md={showCustom ? 12 : 24}>
                 <GpuResultCard
                   title="预估显卡方案"
                   subtitle="基于场景数据推算"
@@ -885,6 +1154,7 @@ export default function ResourceEstimator() {
                   color="#1677ff"
                 />
               </Col>
+              {showCustom && (
               <Col xs={24} md={12}>
                 <GpuResultCard
                   title="自定义数据方案"
@@ -900,6 +1170,7 @@ export default function ResourceEstimator() {
                   isCustom
                 />
               </Col>
+              )}
             </Row>
 
             {/* 配置汇总 */}

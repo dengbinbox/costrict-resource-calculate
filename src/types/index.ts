@@ -23,7 +23,6 @@ export interface GpuModelRecord {
   ttftP90: number | null    // TTFT-P90(ms)
   tokenSpeedAvg: number | null  // token speed avg (t/s)
 }
-
 /** 估算结果（显卡数量 + 性能指标） */
 export interface GpuEstimation {
   gpuCount: number
@@ -32,4 +31,11 @@ export interface GpuEstimation {
   ttftP90: number | null
   tokenSpeedAvg: number | null
   totalGpuCount: number  // 总卡数（单台*台数）
+}
+
+/** 模型能力榜单数据（来自 model-capability_leaderboard.csv） */
+export interface ModelCapabilityRecord {
+  modelName: string
+  capability: number     // 模型能力分数 (0-100)
+  comment: string        // 第3行注释，hover 时展示
 }

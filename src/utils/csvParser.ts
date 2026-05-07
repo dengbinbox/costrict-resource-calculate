@@ -1,4 +1,4 @@
-import type { ScenarioRecord, GpuModelRecord } from '../types'
+import type { ScenarioRecord, GpuModelRecord, ModelCapabilityRecord } from '../types'
 
 /** GPU 详细信息（通用，键=表头，值=单元格内容） */
 export interface GpuInfoRecord {
@@ -52,7 +52,6 @@ function parseCSV(text: string): string[][] {
 }
 
 /** 解析场景 CSV */
-/** 解析场景 CSV */
 export function parseScenariosCSV(text: string): ScenarioRecord[] {
   const rows = parseCSV(text)
   // 跳过表头
@@ -65,6 +64,7 @@ export function parseScenariosCSV(text: string): ScenarioRecord[] {
     priority: parseNum(cols[5] ?? ''),
   })).filter((r) => r.scene !== '')
 }
+
 /** 解析显卡模型 CSV */
 export function parseGpuModelsCSV(text: string): GpuModelRecord[] {
   const rows = parseCSV(text)
@@ -214,4 +214,35 @@ export function parseModelInfoCSV(text: string): ModelInfoMeta {
     headers,
     records,
   }
+}
+
+/**
+ * 解析模型能力榜单 CSV
+ * 格式：
+ *   天体榜单,GLM-Air,MiniMaxM2.7,GLM-4.7-FP8
+ *   模型能力，满分100,0,33.33,29.41
+ *   注释
+ * 第一行：第2列起是模型名称
+ * 第二行：第2列起是模型能力分数
+ * 第三行（可选）：模型注释，hover 时展示
+ */
+export function parseModelCapabilityCSV(text: string): ModelCapabilityRecord[] {
+  const rows = parseCSV(text)
+  if (rows.length < 2) return []
+
+  const headerRow = rows[0]  // 模型名称行
+  const valueRow = rows[1]   // 能力分数行
+  const commentRow = rows.length >= 3 ? rows[2] : null  // 第3行注释（可选）
+
+  const records: ModelCapabilityRecord[] = []
+  for (let i = 1; i < headerRow.length && i < valueRow.length; i++) {
+    const modelName = headerRow[i]?.trim() ?? ''
+    const capability = parseNum(valueRow[i] ?? '') ?? 0
+    const comment = commentRow != null ? (commentRow[i]?.trim() ?? '') : ''
+    if (modelName !== '') {
+      records.push({ modelName, capability, comment })
+    }
+  }
+
+  return records
 }
