@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import scenariosCsvRaw from '../../public/data/scenarios.csv?raw'
 import gpuModelsCsvRaw from '../../public/data/gpu_models.csv?raw'
 import capabilityCsvRaw from '../../public/data/model_capability_leaderboard.csv?raw'
+import recommendModelGpuCsvRaw from '../../public/data/recommend_model_gpu.csv?raw'
 import {
   Button,
   Card,
@@ -38,9 +39,9 @@ import {
   UpOutlined,
   DownOutlined,
 } from '@ant-design/icons'
-import { parseScenariosCSV, parseGpuModelsCSV, estimateGpuCount, parseGpuInfoCSV, parseModelInfoCSV, parseModelCapabilityCSV } from '../utils/csvParser'
+import { parseScenariosCSV, parseGpuModelsCSV, estimateGpuCount, parseGpuInfoCSV, parseModelInfoCSV, parseModelCapabilityCSV, parseRecommendModelGpuCSV } from '../utils/csvParser'
 import type { GpuInfoMeta, ModelInfoMeta } from '../utils/csvParser'
-import type { ScenarioRecord, GpuModelRecord, ModelCapabilityRecord } from '../types'
+import type { ScenarioRecord, GpuModelRecord, ModelCapabilityRecord, RecommendModelGpuRecord } from '../types'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -321,6 +322,7 @@ export default function ResourceEstimator() {
   const [gpuInfo, setGpuInfo] = useState<GpuInfoMeta>({ headers: [], records: [] })
   const [modelInfo, setModelInfo] = useState<ModelInfoMeta>({ headers: [], records: [] })
   const [capabilityRecords, setCapabilityRecords] = useState<ModelCapabilityRecord[]>([])
+  const [recommendRecords, setRecommendRecords] = useState<RecommendModelGpuRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -365,8 +367,25 @@ export default function ResourceEstimator() {
       // 默认选中优先级为 0 的场景
       const defaultScene = sorted.find((s) => s.priority === 0)
       if (defaultScene) setSelectedScene(defaultScene.scene)
-      setGpuModels(parseGpuModelsCSV(gpuModelsCsvRaw))
+      const parsedGpuModels = parseGpuModelsCSV(gpuModelsCsvRaw)
+      setGpuModels(parsedGpuModels)
       setCapabilityRecords(parseModelCapabilityCSV(capabilityCsvRaw))
+      // 推荐模型-显卡配对
+      const parsedRecommend = parseRecommendModelGpuCSV(recommendModelGpuCsvRaw)
+      setRecommendRecords(parsedRecommend)
+      // 默认选中推荐列表的第一个
+      if (parsedRecommend.length > 0) {
+        const first = parsedRecommend[0]
+        const firstModelGpus = parsedGpuModels.filter((r) => r.modelName === first.modelName)
+        if (firstModelGpus.length > 0) {
+          setSelectedModel(first.modelName)
+          if (first.gpuName && firstModelGpus.some((r) => r.gpuName === first.gpuName)) {
+            setSelectedGpu(first.gpuName)
+          } else {
+            setSelectedGpu(firstModelGpus[0].gpuName)
+          }
+        }
+      }
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : '数据加载异常')
       setLoading(false)
@@ -438,18 +457,26 @@ export default function ResourceEstimator() {
     [gpuModels],
   )
 
+  /** 推荐模型名集合（快速查找） */
+  const recommendModelNames = useMemo(
+    () => new Set(recommendRecords.map((r) => r.modelName)),
+    [recommendRecords],
+  )
+
+  /** 推荐模型→推荐显卡映射 */
+  const recommendGpuMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const r of recommendRecords) {
+      if (r.gpuName) map.set(r.modelName, r.gpuName)
+    }
+    return map
+  }, [recommendRecords])
+
   /** 根据选中模型，过滤可用的显卡类型 */
   const availableGpus = useMemo(() => {
     if (!selectedModel) return []
     return [...new Set(gpuModels.filter((r) => r.modelName === selectedModel).map((r) => r.gpuName))]
   }, [gpuModels, selectedModel])
-
-  /** 当模型变化时，重置显卡选择（如果当前 gpu 不在可用列表中） */
-  useEffect(() => {
-    if (selectedGpu && !availableGpus.includes(selectedGpu)) {
-      setSelectedGpu(null)
-    }
-  }, [availableGpus, selectedGpu])
 
   /** 预估显卡数量（基于 estimatedRpm） */
   const estimatedGpuResult = useMemo(() => {
@@ -649,21 +676,21 @@ export default function ResourceEstimator() {
               )}
             </Row>
           </Form>
-        </Card>
 
-        {/* ── 自定义输入折叠按钮 ─────────────────────────────────────── */}
-        <div style={{ marginBottom: 24, textAlign: 'center' }}>
-          <Tooltip title="如果你需要自定义使用人数或 RPM，可点此展开进行手动设置">
-            <Button
-              type="dashed"
-              icon={<RocketOutlined />}
-              onClick={() => setShowCustom(!showCustom)}
-              style={{ borderRadius: 8 }}
-            >
-              {showCustom ? '收起自定义人数/RPM方案' : '展开自定义人数/RPM方案'}
-            </Button>
-          </Tooltip>
-        </div>
+          {/* 自定义输入折叠入口 */}
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 12, marginTop: 8, textAlign: 'right' }}>
+            <Tooltip title="如果你需要自定义使用人数或 RPM，可点此展开进行手动设置">
+              <Button
+                type="link"
+                size="small"
+                icon={<RocketOutlined />}
+                onClick={() => setShowCustom(!showCustom)}
+              >
+                {showCustom ? '收起自定义人数/RPM方案' : '自定义人数/RPM方案'}
+              </Button>
+            </Tooltip>
+          </div>
+        </Card>
 
         {/* ── Section 2: 自定义输入 ─────────────────────────────────────── */}
         {showCustom && (
@@ -835,13 +862,25 @@ export default function ResourceEstimator() {
                     value={selectedModel}
                     onChange={(v) => {
                       setSelectedModel(v)
-                      setSelectedGpu(null)
+                      const newGpus = [...new Set(gpuModels.filter((r) => r.modelName === v).map((r) => r.gpuName))]
+                      // 始终展示一张显卡：推荐优先，否则第一个
+                      const recommendedGpu = recommendGpuMap.get(v)
+                      if (recommendedGpu && newGpus.includes(recommendedGpu)) {
+                        setSelectedGpu(recommendedGpu)
+                      } else {
+                        setSelectedGpu(newGpus[0] ?? null)
+                      }
                     }}
                     allowClear
                     showSearch
                   >
                     {allModels.map((m) => (
-                      <Option key={m} value={m}>{m}</Option>
+                      <Option key={m} value={m}>
+                        {m}
+                        {recommendModelNames.has(m) && (
+                          <Tag color="orange" style={{ marginLeft: 6, fontSize: 11 }}>推荐</Tag>
+                        )}
+                      </Option>
                     ))}
                   </Select>
                 </Form.Item>
@@ -878,19 +917,25 @@ export default function ResourceEstimator() {
                     disabled={!selectedModel}
                     allowClear
                   >
-                    {availableGpus.map((g) => (
-                      <Option key={g} value={g}>
-                        <Space>
-                          <ThunderboltOutlined style={{ color: '#faad14' }} />
-                          {g}
-                          {gpuModels.find((r) => r.gpuName === g && r.modelName === selectedModel) && (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              ¥{(gpuModels.find((r) => r.gpuName === g && r.modelName === selectedModel)!.gpuPrice / 1e4).toFixed(0)}万/张
-                            </Text>
-                          )}
-                        </Space>
-                      </Option>
-                    ))}
+                    {availableGpus.map((g) => {
+                      const isRecommendedGpu = recommendGpuMap.get(selectedModel ?? '') === g
+                      return (
+                        <Option key={g} value={g}>
+                          <Space>
+                            <ThunderboltOutlined style={{ color: '#faad14' }} />
+                            {g}
+                            {isRecommendedGpu && (
+                              <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>推荐</Tag>
+                            )}
+                            {gpuModels.find((r) => r.gpuName === g && r.modelName === selectedModel) && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                ¥{(gpuModels.find((r) => r.gpuName === g && r.modelName === selectedModel)!.gpuPrice / 1e4).toFixed(0)}万/张
+                              </Text>
+                            )}
+                          </Space>
+                        </Option>
+                      )
+                    })}
                   </Select>
                 </Form.Item>
               </Col>
@@ -918,11 +963,13 @@ export default function ResourceEstimator() {
                   const barWidth = Math.max(3, record.capability)
                   const isAvailable = allModels.includes(record.modelName)
                   const isSelected = selectedModel === record.modelName
+                  const isRecommendedModel = recommendModelNames.has(record.modelName)
 
                   // 构造柱状条 tooltip 内容
                   const barTooltipLines: string[] = []
                   if (record.comment) barTooltipLines.push(`💬 ${record.comment}`)
                   barTooltipLines.push(`能力分数: ${record.capability}`)
+                  if (isRecommendedModel) barTooltipLines.push('⭐ 推荐模型')
                   if (isAvailable) {
                     barTooltipLines.push('点击可选择此模型')
                   } else {
@@ -975,6 +1022,11 @@ export default function ResourceEstimator() {
                               当前
                             </Tag>
                           )}
+                          {isRecommendedModel && (
+                            <Tag color="orange" style={{ marginRight: 4, fontSize: 10, lineHeight: '16px' }}>
+                              推荐
+                            </Tag>
+                          )}
                           {record.modelName}
                         </div>
                       </Tooltip>
@@ -1006,7 +1058,14 @@ export default function ResourceEstimator() {
                             onClick={() => {
                               if (isAvailable) {
                                 setSelectedModel(record.modelName)
-                                setSelectedGpu(null)
+                                // 优先选中推荐显卡（柱状图点击等同于情况1：未选择→推荐显卡）
+                                const newGpus = [...new Set(gpuModels.filter((r) => r.modelName === record.modelName).map((r) => r.gpuName))]
+                                const recommendedGpu = recommendGpuMap.get(record.modelName)
+                                if (recommendedGpu && newGpus.includes(recommendedGpu)) {
+                                  setSelectedGpu(recommendedGpu)
+                                } else {
+                                  setSelectedGpu(newGpus[0] ?? null)
+                                }
                               }
                             }}
                             onMouseEnter={(e) => {

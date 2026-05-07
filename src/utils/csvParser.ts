@@ -1,4 +1,4 @@
-import type { ScenarioRecord, GpuModelRecord, ModelCapabilityRecord } from '../types'
+import type { ScenarioRecord, GpuModelRecord, ModelCapabilityRecord, RecommendModelGpuRecord } from '../types'
 
 /** GPU 详细信息（通用，键=表头，值=单元格内容） */
 export interface GpuInfoRecord {
@@ -245,4 +245,23 @@ export function parseModelCapabilityCSV(text: string): ModelCapabilityRecord[] {
   }
 
   return records
+}
+
+/**
+ * 解析推荐模型-显卡配对 CSV
+ * 格式：
+ *   model_name,gpu_name
+ *   MiniMaxM2.7,B300
+ *   GLM-4.7-FP8,
+ * gpu_name 为空时表示仅推荐模型，不指定特定显卡
+ */
+export function parseRecommendModelGpuCSV(text: string): RecommendModelGpuRecord[] {
+  const rows = parseCSV(text)
+  if (rows.length < 2) return []
+  return rows.slice(1)
+    .map((cols) => ({
+      modelName: cols[0]?.trim() ?? '',
+      gpuName: cols[1]?.trim() ?? '',
+    }))
+    .filter((r) => r.modelName !== '')
 }

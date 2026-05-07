@@ -39,3 +39,9 @@ export interface ModelCapabilityRecord {
   capability: number     // 模型能力分数 (0-100)
   comment: string        // 第3行注释，hover 时展示
 }
+
+/** 推荐模型-显卡配对（来自 recommend_model_gpu.csv） */
+export interface RecommendModelGpuRecord {
+  modelName: string
+  gpuName: string  // 空字符串表示仅推荐模型，未指定显卡
+}
