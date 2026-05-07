@@ -350,18 +350,18 @@ export default function ResourceEstimator() {
     // 场景和模型数据内联（?raw），直接解析
     try {
       const rawScenarios = parseScenariosCSV(scenariosCsvRaw)
-      // 排序：优先级为0的排最前（作为默认），其余按优先级从高到低
+      // 排序：优先级为0的排最前（作为默认），其余按优先级从小到大（null 放最后）
       const sorted = [...rawScenarios].sort((a, b) => {
         const pa = a.priority
         const pb = b.priority
         if (pa === 0 && pb !== 0) return -1
         if (pb === 0 && pa !== 0) return 1
         if (pa === 0 && pb === 0) return 0
-        // 其余：从高到低（null 放最后）
+        // 其余：从小到大（null 放最后）
         if (pa == null && pb == null) return 0
         if (pa == null) return 1
         if (pb == null) return -1
-        return pb - pa
+        return pa - pb
       })
       setScenarios(sorted)
       // 默认选中优先级为 0 的场景
@@ -825,6 +825,9 @@ export default function ResourceEstimator() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <DatabaseOutlined style={{ fontSize: 18, color: '#13c2c2' }} />
             <Title level={5} style={{ margin: 0 }}>模型 & 显卡选择</Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              （数据还在逐步完善中）
+            </Text>
             <Button
               type="link"
               size="small"
@@ -953,7 +956,7 @@ export default function ResourceEstimator() {
               <BarChartOutlined style={{ fontSize: 18, color: '#eb2f96' }} />
               <Title level={5} style={{ margin: 0 }}>模型能力榜单</Title>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                （点击柱状条快速选择模型）
+                （点击柱状条快速选择模型,数据还在逐步完善中）
               </Text>
             </div>
 
