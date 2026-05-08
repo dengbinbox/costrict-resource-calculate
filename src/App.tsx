@@ -27,7 +27,7 @@ function App() {
           }}
         >
           <Title level={4} style={{ color: '#fff', margin: 0, letterSpacing: 1 }}>
-            🖥️ CoStrict AS · 智算资源平台
+            🖥️ CoStrict · 资源估算平台
           </Title>
         </Header>
 
@@ -44,7 +44,7 @@ function App() {
             borderTop: '1px solid #e8e8e8',
           }}
         >
-          CoStrict AS ©{new Date().getFullYear()} · GPU 资源预估计算器
+          CoStrict © {new Date().getFullYear()} · GPU 资源预估计算器
         </Footer>
       </Layout>
     </ConfigProvider>
