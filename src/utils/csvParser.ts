@@ -94,8 +94,9 @@ export function parseGpuModelsCSV(text: string): GpuModelRecord[] {
  *   1. 每台机器 RPM = supportedRpm / machineCount
  *   2. 精确所需卡数（浮点）= (targetRpm / 每台RPM) × gpuPerMachine
  *   3. 取整规则：
- *      - 若 minGpuCount 存在：向上取整到 minGpuCount 的整数倍
- *      - 否则：四舍五入取整
+ *      - 先四舍五入到最近整数
+ *      - 若 minGpuCount 存在：取 max(四舍五入值, minGpuCount)
+ *      - 否则：向上取整到 gpuPerMachine（单机显卡数）的整数倍
  *   4. 所需机器数 = ceil(取整后卡数 / gpuPerMachine)
  */
 export function estimateGpuCount(
@@ -126,12 +127,13 @@ export function estimateGpuCount(
   // 精确所需卡数（浮点）
   const gpuCountExact = (targetRpm / rpmPerMachine) * base.gpuPerMachine
 
-  // 取整：按 minGpuCount 的整数倍向上取整，否则四舍五入
+  // 取整：先四舍五入，再根据最低卡数/单机卡数约束调整
+  const rounded = Math.round(gpuCountExact)
   let gpuCount: number
   if (base.minGpuCount != null && base.minGpuCount > 0) {
-    gpuCount = Math.ceil(gpuCountExact / base.minGpuCount) * base.minGpuCount
+    gpuCount = Math.max(rounded, base.minGpuCount)
   } else {
-    gpuCount = Math.round(gpuCountExact)
+    gpuCount = Math.ceil(rounded / base.gpuPerMachine) * base.gpuPerMachine
   }
 
   // 根据取整后的卡数反推机器数（向上取整）
