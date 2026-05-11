@@ -84,6 +84,8 @@ export function parseGpuModelsCSV(text: string): GpuModelRecord[] {
     ttftP90: parseNum(cols[10] ?? ''),
     avgTTFT: parseNum(cols[11] ?? ''),
     tokenSpeedAvg: parseNum(cols[12] ?? ''),
+    tag: cols[13]?.trim() ?? '',
+    notes: cols[14]?.trim() ?? '',
   })).filter((r) => r.gpuName !== '' && r.modelName !== '')
 }
 /**
@@ -95,7 +97,7 @@ export function parseGpuModelsCSV(text: string): GpuModelRecord[] {
  *   2. 精确所需卡数（浮点）= (targetRpm / 每台RPM) × gpuPerMachine
  *   3. 取整规则：
  *      - 先四舍五入到最近整数
- *      - 若 minGpuCount 存在：取 max(四舍五入值, minGpuCount)
+ *      - 若 minGpuCount 存在：向上取整到 minGpuCount 的整数倍（例: rounded=11, minGpuCount=2 → 12）
  *      - 否则：向上取整到 gpuPerMachine（单机显卡数）的整数倍
  *   4. 所需机器数 = ceil(取整后卡数 / gpuPerMachine)
  */
@@ -127,12 +129,14 @@ export function estimateGpuCount(
   // 精确所需卡数（浮点）
   const gpuCountExact = (targetRpm / rpmPerMachine) * base.gpuPerMachine
 
-  // 取整：先四舍五入，再根据最低卡数/单机卡数约束调整
-  const rounded = Math.round(gpuCountExact)
+  // 取整：先四舍五入，再按最低卡数/单机卡数向上对齐
+  const rounded = Math.max(1, Math.round(gpuCountExact))
   let gpuCount: number
   if (base.minGpuCount != null && base.minGpuCount > 0) {
-    gpuCount = Math.max(rounded, base.minGpuCount)
+    // 向上取整到 minGpuCount 的整数倍（rounded=11, minGpuCount=2 → 12）
+    gpuCount = Math.ceil(rounded / base.minGpuCount) * base.minGpuCount
   } else {
+    // 向上取整到 gpuPerMachine（单机卡数）的整数倍
     gpuCount = Math.ceil(rounded / base.gpuPerMachine) * base.gpuPerMachine
   }
 

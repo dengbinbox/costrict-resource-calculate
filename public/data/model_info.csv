@@ -3,3 +3,5 @@ MiniMaxM2.7,https://modelscope.cn/models/MiniMax/MiniMax-M2.7|https://huggingfac
 GLM-4.6-FP8,https://modelscope.cn/models/ZhipuAI/GLM-4.6-FP8|https://huggingface.co/zai-org/GLM-4.6-FP8,358.46B,200K ,
 Kimi-K2.5,https://modelscope.cn/models/moonshotai/Kimi-K2.5|https://huggingface.co/moonshotai/Kimi-K2.5,1058.59B,256K,MIT
 GLM-4.7-FP8,https://modelscope.cn/models/ZhipuAI/GLM-4.7-FP8|https://huggingface.co/zai-org/GLM-4.7-FP8,358.46B,200K,
+DeepSeek-V4-Flash,https://www.modelscope.ai/models/deepseek-ai/DeepSeek-V4-Flash|https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash,284B,1000K,MIT
+DeepSeek-V4-Pro,https://www.modelscope.ai/models/deepseek-ai/DeepSeek-V4-Pro|https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro,1.6T,1000K,MIT

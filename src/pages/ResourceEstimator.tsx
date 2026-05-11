@@ -225,7 +225,7 @@ function GpuResultCard({
               boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
             }}
           >
-            <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 4 }}>所需显卡数</div>
+            <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 4 }}>最少所需显卡数</div>
             {gpuCount != null && perfData ? (
               <Tooltip
                 title={
@@ -496,6 +496,12 @@ export default function ResourceEstimator() {
     if (!selectedGpu || !selectedModel) return null
     const rec = gpuModels.find((r) => r.gpuName === selectedGpu && r.modelName === selectedModel)
     return rec?.gpuPrice ?? null
+  }, [gpuModels, selectedGpu, selectedModel])
+
+  /** 当前匹配的 GPU-模型记录（用于获取 Tag/Notes 等信息） */
+  const matchedGpuRecord = useMemo(() => {
+    if (!selectedGpu || !selectedModel) return null
+    return gpuModels.find((r) => r.gpuName === selectedGpu && r.modelName === selectedModel) ?? null
   }, [gpuModels, selectedGpu, selectedModel])
 
   // ── 渲染 ──────────────────────────────────────────────────────────────────
@@ -944,6 +950,34 @@ export default function ResourceEstimator() {
                 </Form.Item>
               </Col>
             </Row>
+
+            {/* Tag 和 Notes 展示 */}
+            {matchedGpuRecord && (matchedGpuRecord.tag || matchedGpuRecord.notes) && (
+              <>
+                {matchedGpuRecord.tag && (
+                  <Row gutter={[24, 0]} style={{ marginTop: 8 }}>
+                    <Col span={24}>
+                      <Space size={[4, 4]} wrap>
+                        {matchedGpuRecord.tag.split('|').map((t, i) => (
+                          <Tag key={i} color="blue" style={{ fontSize: 13, padding: '2px 10px' }}>
+                            🏷️ {t.trim()}
+                          </Tag>
+                        ))}
+                      </Space>
+                    </Col>
+                  </Row>
+                )}
+                {matchedGpuRecord.notes && (
+                  <Row gutter={[24, 0]} style={{ marginTop: matchedGpuRecord.tag ? 4 : 8 }}>
+                    <Col span={24}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        📝 {matchedGpuRecord.notes}
+                      </Text>
+                    </Col>
+                  </Row>
+                )}
+              </>
+            )}
           </Form>
         </Card>
 

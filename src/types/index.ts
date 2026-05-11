@@ -23,6 +23,8 @@ export interface GpuModelRecord {
   ttftP90: number | null    // TTFT-P90(ms)
   avgTTFT: number | null    // Avg TTFT (ms)
   tokenSpeedAvg: number | null  // token speed avg (t/s)
+  tag: string               // Tag 标签（高亮展示）
+  notes: string             // Notes 备注（hover 提示 + 详情展示）
 }
 /** 估算结果（显卡数量 + 性能指标） */
 export interface GpuEstimation {
