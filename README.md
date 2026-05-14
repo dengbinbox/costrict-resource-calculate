@@ -102,6 +102,43 @@ npm run build && docker build -t costrict-as:latest . && docker run -d --name co
 
 ---
 
+## GitHub Actions 自动部署
+
+本项目配置了自动构建与远程部署工作流（[`.github/workflows/release.yml`](.github/workflows/release.yml)），推送 tag 时自动触发构建并部署到远程服务器。
+
+### 触发条件
+
+推送任意 tag（如 `v1.0.0`）即可触发：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### 配置 Secrets
+
+在使用自动部署前，需要在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 中配置以下 Secrets：
+
+| Secret | 说明 | 示例值 |
+|---|---|---|
+| `SSH_HOST` | 远程服务器 IP 或域名 | `192.168.1.100` |
+| `SSH_PORT` | SSH 端口 | `22` |
+| `SSH_USERNAME` | SSH 登录用户名 | `zhuge` |
+| `REMOTE_PATH` | 远程部署目标目录 | `/home/zhuge/zhuge_web/costrict-resource-calculate` |
+| `SSH_KEY` | SSH 私钥（与 `SSH_PASSWORD` 二选一） | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+| `SSH_PASSWORD` | SSH 登录密码（与 `SSH_KEY` 二选一） | `your_password` |
+
+> **认证方式说明**：如果同时配置了 `SSH_KEY` 和 `SSH_PASSWORD`，优先使用密码（`SSH_PASSWORD`）。仅配置 `SSH_KEY` 时使用密钥认证。
+
+### 部署行为
+
+- 使用 `rsync -avz --delete` 将 `dist/` 完整同步到 `${REMOTE_PATH}/`
+- `dist/index.html` → `${REMOTE_PATH}/index.html`
+- `dist/assets/...` → `${REMOTE_PATH}/assets/...`
+- `--delete` 确保远程多余的旧文件被自动清理
+
+---
+
 ## 项目结构
 
 ```
