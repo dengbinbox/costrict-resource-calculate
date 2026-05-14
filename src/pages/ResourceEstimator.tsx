@@ -842,7 +842,7 @@ export default function ResourceEstimator() {
               onClick={() => setShowBarChart(!showBarChart)}
               style={{ marginLeft: 'auto', fontSize: 12 }}
             >
-              {showBarChart ? '收起能力榜单' : '展开能力榜单'}
+              {showBarChart ? '收起模型能力榜单' : '展开模型能力榜单'}
             </Button>
           </div>
 
@@ -991,7 +991,7 @@ export default function ResourceEstimator() {
               <BarChartOutlined style={{ fontSize: 18, color: '#eb2f96' }} />
               <Title level={5} style={{ margin: 0 }}>模型能力榜单</Title>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                （点击柱状条快速选择模型,数据还在逐步完善中）
+                （模型排名分数仅供参考，点击柱状条快速选择模型,数据还在逐步完善中）
               </Text>
             </div>
 
